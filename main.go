@@ -115,7 +115,7 @@ func (r *ImageRender) RenderJson(httpRender *render.Render, w http.ResponseWrite
 	}
 
 	httpRender.JSON(w, http.StatusOK,
-		map[string]interface{}{"code": 200, "url": imgPath})
+		map[string]interface{}{"code": 200, "result": imgPath})
 }
 
 func checkFileIsExist(filename string) bool {
