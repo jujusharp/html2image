@@ -38,6 +38,14 @@ type ImageOptions struct {
 	//
 	// Values supported between 1 and 100. Default is 94
 	Quality int
+	// Crop-x determines the final image crop from x
+	CropX int
+	// Crop-y determines the final image crop from y
+	CropY int
+	// Crop-w determines the final image crop width
+	CropW int
+	// Crop-h determines the final image crop height
+	CropH int
 	// Html is a string of html to render into and image.
 	//
 	// Only needed to be set if Input is set to "-"
@@ -111,6 +119,26 @@ func buildParams(options *ImageOptions) ([]string, error) {
 	if options.Quality != 0 {
 		a = append(a, "--quality")
 		a = append(a, strconv.Itoa(options.Quality))
+	}
+
+	if options.CropX != 0 {
+		a = append(a, "--crop-x")
+		a = append(a, strconv.Itoa(options.CropX))
+	}
+
+	if options.CropY != 0 {
+		a = append(a, "--crop-y")
+		a = append(a, strconv.Itoa(options.CropX))
+	}
+
+	if options.CropW != 0 {
+		a = append(a, "--crop-w")
+		a = append(a, strconv.Itoa(options.CropX))
+	}
+
+	if options.CropH != 0 {
+		a = append(a, "--crop-h")
+		a = append(a, strconv.Itoa(options.CropX))
 	}
 
 	// url and output come last
