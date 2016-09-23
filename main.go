@@ -7,19 +7,14 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	//	"github.com/unrolled/render" // or "gopkg.in/unrolled/render.v1"
+	"github.com/unrolled/render" // or "gopkg.in/unrolled/render.v1"
 )
 
 type ImageRender struct {
 	BinaryPath *string
 }
 
-//render image with wkhtmltoimage with url
-func (r *ImageRender) GetBytes(req *http.Request, format string) ([]byte, error) {
-	err := req.ParseForm()
-	if err != nil {
-		return nil, err
-	}
+func (r *ImageRender) BuildImageOptions(req *http.Request, format string) (ImageOptions, error) {
 	url := req.Form.Get("url")
 
 	var html string
@@ -27,7 +22,7 @@ func (r *ImageRender) GetBytes(req *http.Request, format string) ([]byte, error)
 		html = req.Form.Get("html")
 
 		if len(html) == 0 {
-			return nil, errors.New("url can't be null")
+			return ImageOptions{}, errors.New("url can't be null")
 		} else {
 			url = "-"
 			log.Println("render for: ", html)
@@ -54,13 +49,22 @@ func (r *ImageRender) GetBytes(req *http.Request, format string) ([]byte, error)
 	if err == nil {
 		c.Quality = quality
 	}
-
-	return GenerateImage(&c)
+	return c, nil
 }
 
 //render image bytes to browser
 func (r *ImageRender) RenderBytes(w http.ResponseWriter, req *http.Request, format string) {
-	out, err := r.GetBytes(req, format)
+	err := req.ParseForm()
+	if err != nil {
+		log.Println("parse form err: ", err)
+		return
+	}
+	c, err := r.BuildImageOptions(req, format)
+	if err != nil {
+		w.Write([]byte(fmt.Sprint(err)))
+		return
+	}
+	out, err := GenerateImage(&c)
 	if err != nil {
 		w.Write([]byte(fmt.Sprint(err)))
 		return
@@ -68,20 +72,57 @@ func (r *ImageRender) RenderBytes(w http.ResponseWriter, req *http.Request, form
 	w.Write(out)
 }
 
+func (r *ImageRender) RenderJson(httpRender *render.Render, w http.ResponseWriter, req *http.Request) {
+	err := req.ParseForm()
+	if err != nil {
+		log.Println("parse form err: ", err)
+		httpRender.Text(w, http.StatusInternalServerError, fmt.Sprint(err))
+		return
+	}
+	format := req.Form.Get("format")
+	if len(format) == 0 {
+		httpRender.JSON(w, http.StatusOK,
+			map[string]interface{}{"code": 400, "message": "format can't be null"})
+		return
+	}
+	if format != "png" && format != "jpg" {
+		httpRender.JSON(w, http.StatusOK,
+			map[string]interface{}{"code": 400, "message": "format type invalid"})
+		return
+	}
+	c, err := r.BuildImageOptions(req, format)
+	if err != nil {
+		httpRender.Text(w, http.StatusInternalServerError, fmt.Sprint(err))
+		return
+	}
+	objId := NewObjectId()
+	c.Output = "./tmp/" + objId.Hex() + "." + format
+	_, err = GenerateImage(&c)
+	if err != nil {
+		httpRender.Text(w, http.StatusInternalServerError, fmt.Sprint(err))
+		return
+	}
+	httpRender.JSON(w, http.StatusOK,
+		map[string]interface{}{"code": 200, "url": c.Output})
+}
+
 func main() {
 	binPath := flag.String("path", "/usr/local/bin/wkhtmltoimage", "wkhtmltoimage bin path")
 	port := flag.String("web.port", "8080", "web server port")
 	flag.Parse()
-	render := ImageRender{}
-	render.BinaryPath = binPath
-	//	r := render.New()
+	imgRender := ImageRender{}
+	imgRender.BinaryPath = binPath
+	r := render.New()
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/render.png", func(w http.ResponseWriter, req *http.Request) {
-		render.RenderBytes(w, req, "png")
+	mux.HandleFunc("/to/img.png", func(w http.ResponseWriter, req *http.Request) {
+		imgRender.RenderBytes(w, req, "png")
 	})
-	mux.HandleFunc("/render.jpg", func(w http.ResponseWriter, req *http.Request) {
-		render.RenderBytes(w, req, "jpg")
+	mux.HandleFunc("/to/img.jpg", func(w http.ResponseWriter, req *http.Request) {
+		imgRender.RenderBytes(w, req, "jpg")
+	})
+	mux.HandleFunc("/api/v1/to/img.json", func(w http.ResponseWriter, req *http.Request) {
+		imgRender.RenderJson(r, w, req)
 	})
 	if len(*port) == 0 {
 		*port = "8080"
