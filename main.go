@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 	"github.com/unrolled/render" // or "gopkg.in/unrolled/render.v1"
 )
 
@@ -99,7 +100,10 @@ func (r *ImageRender) RenderJson(httpRender *render.Render, w http.ResponseWrite
 		httpRender.Text(w, http.StatusInternalServerError, fmt.Sprint(err))
 		return
 	}
-	imgPath := contentToMd5(c.Input+c.Html) + "." + format
+
+	today := time.Now().Format("06/01/02/")
+	os.MkdirAll(*imgRootDir+today, 0755)
+	imgPath := today + contentToMd5(c.Input+c.Html) + "." + format
 	c.Output = *imgRootDir + imgPath
 	log.Println("generate file path:", c.Output)
 	if !checkFileIsExist(c.Output) {
@@ -138,7 +142,6 @@ func main() {
 	imgRender.BinaryPath = binPath
 	r := render.New()
 	mux := http.NewServeMux()
-	os.MkdirAll(*imgRootDir, 0755)
 	staticHandler := http.FileServer(http.Dir(*imgRootDir))
 
 	mux.HandleFunc("/to/img.png", func(w http.ResponseWriter, req *http.Request) {
