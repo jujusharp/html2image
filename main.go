@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	//	"github.com/unrolled/render" // or "gopkg.in/unrolled/render.v1"
 )
 
@@ -38,6 +39,21 @@ func (r *ImageRender) GetBytes(req *http.Request, format string) ([]byte, error)
 
 	c := ImageOptions{BinaryPath: *r.BinaryPath,
 		Input: url, Html: html, Format: format}
+
+	width, err := strconv.Atoi(req.Form.Get("width"))
+	if err == nil {
+		c.Width = width
+	}
+
+	height, err := strconv.Atoi(req.Form.Get("height"))
+	if err == nil {
+		c.Height = height
+	}
+
+	quality, err := strconv.Atoi(req.Form.Get("quality"))
+	if err == nil {
+		c.Quality = quality
+	}
 
 	return GenerateImage(&c)
 }
