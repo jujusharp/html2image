@@ -99,7 +99,8 @@ func (r *ImageRender) RenderJson(httpRender *render.Render, w http.ResponseWrite
 		httpRender.Text(w, http.StatusInternalServerError, fmt.Sprint(err))
 		return
 	}
-	c.Output = *imgRootDir + contentToMd5(c.Input+c.Html) + "." + format
+	imgPath := contentToMd5(c.Input+c.Html) + "." + format
+	c.Output = *imgRootDir + imgPath
 	log.Println("generate file path:", c.Output)
 	if !checkFileIsExist(c.Output) {
 		_, err = GenerateImage(&c)
@@ -110,7 +111,7 @@ func (r *ImageRender) RenderJson(httpRender *render.Render, w http.ResponseWrite
 	}
 
 	httpRender.JSON(w, http.StatusOK,
-		map[string]interface{}{"code": 200, "url": c.Output})
+		map[string]interface{}{"code": 200, "url": imgPath})
 }
 
 func checkFileIsExist(filename string) bool {
@@ -137,12 +138,18 @@ func main() {
 	imgRender.BinaryPath = binPath
 	r := render.New()
 	mux := http.NewServeMux()
+	os.MkdirAll(*imgRootDir, 0755)
+	staticHandler := http.FileServer(http.Dir(*imgRootDir))
 
 	mux.HandleFunc("/to/img.png", func(w http.ResponseWriter, req *http.Request) {
 		imgRender.RenderBytes(w, req, "png")
 	})
 	mux.HandleFunc("/to/img.jpg", func(w http.ResponseWriter, req *http.Request) {
 		imgRender.RenderBytes(w, req, "jpg")
+	})
+	mux.HandleFunc("/show/img/", func(w http.ResponseWriter, req *http.Request) {
+		req.URL.Path = req.URL.Path[9:]
+		staticHandler.ServeHTTP(w, req)
 	})
 	mux.HandleFunc("/api/v1/to/img.json", func(w http.ResponseWriter, req *http.Request) {
 		imgRender.RenderJson(r, w, req, imgRootDir)
