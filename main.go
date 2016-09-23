@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
@@ -95,8 +97,8 @@ func (r *ImageRender) RenderJson(httpRender *render.Render, w http.ResponseWrite
 		httpRender.Text(w, http.StatusInternalServerError, fmt.Sprint(err))
 		return
 	}
-	objId := NewObjectId()
-	c.Output = "./tmp/" + objId.Hex() + "." + format
+	c.Output = "./tmp/" + contentToMd5(c.Input+c.Html) + "." + format
+	log.Println(c.Output)
 	_, err = GenerateImage(&c)
 	if err != nil {
 		httpRender.Text(w, http.StatusInternalServerError, fmt.Sprint(err))
@@ -104,6 +106,13 @@ func (r *ImageRender) RenderJson(httpRender *render.Render, w http.ResponseWrite
 	}
 	httpRender.JSON(w, http.StatusOK,
 		map[string]interface{}{"code": 200, "url": c.Output})
+}
+
+func contentToMd5(content string) string {
+	md5Ctx := md5.New()
+	md5Ctx.Write([]byte(content))
+	cipherBytes := md5Ctx.Sum(nil)
+	return hex.EncodeToString(cipherBytes)
 }
 
 func main() {
