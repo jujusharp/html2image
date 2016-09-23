@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"github.com/unrolled/render" // or "gopkg.in/unrolled/render.v1"
 )
@@ -74,7 +75,8 @@ func (r *ImageRender) RenderBytes(w http.ResponseWriter, req *http.Request, form
 	w.Write(out)
 }
 
-func (r *ImageRender) RenderJson(httpRender *render.Render, w http.ResponseWriter, req *http.Request) {
+func (r *ImageRender) RenderJson(httpRender *render.Render, w http.ResponseWriter,
+	req *http.Request, imgRootDir *string) {
 	err := req.ParseForm()
 	if err != nil {
 		log.Println("parse form err: ", err)
@@ -97,15 +99,26 @@ func (r *ImageRender) RenderJson(httpRender *render.Render, w http.ResponseWrite
 		httpRender.Text(w, http.StatusInternalServerError, fmt.Sprint(err))
 		return
 	}
-	c.Output = "./tmp/" + contentToMd5(c.Input+c.Html) + "." + format
-	log.Println(c.Output)
-	_, err = GenerateImage(&c)
-	if err != nil {
-		httpRender.Text(w, http.StatusInternalServerError, fmt.Sprint(err))
-		return
+	c.Output = *imgRootDir + contentToMd5(c.Input+c.Html) + "." + format
+	log.Println("generate file path:", c.Output)
+	if !checkFileIsExist(c.Output) {
+		_, err = GenerateImage(&c)
+		if err != nil {
+			httpRender.Text(w, http.StatusInternalServerError, fmt.Sprint(err))
+			return
+		}
 	}
+
 	httpRender.JSON(w, http.StatusOK,
 		map[string]interface{}{"code": 200, "url": c.Output})
+}
+
+func checkFileIsExist(filename string) bool {
+	var exist = true
+	if _, err := os.Stat(filename); os.IsNotExist(err) {
+		exist = false
+	}
+	return exist
 }
 
 func contentToMd5(content string) string {
@@ -117,6 +130,7 @@ func contentToMd5(content string) string {
 
 func main() {
 	binPath := flag.String("path", "/usr/local/bin/wkhtmltoimage", "wkhtmltoimage bin path")
+	imgRootDir := flag.String("img.dir", "./tmp/", "generated image local dir")
 	port := flag.String("web.port", "8080", "web server port")
 	flag.Parse()
 	imgRender := ImageRender{}
@@ -131,7 +145,7 @@ func main() {
 		imgRender.RenderBytes(w, req, "jpg")
 	})
 	mux.HandleFunc("/api/v1/to/img.json", func(w http.ResponseWriter, req *http.Request) {
-		imgRender.RenderJson(r, w, req)
+		imgRender.RenderJson(r, w, req, imgRootDir)
 	})
 	if len(*port) == 0 {
 		*port = "8080"
