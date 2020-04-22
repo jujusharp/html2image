@@ -20,6 +20,7 @@ a golang wrapper to reander html, markdown to image
 4. render jpg (markdown only)
 
 [http://127.0.0.1:10000/v1/md2img/to/img.jpg?url=https://github.com/Ink-33/html2image/raw/master/README.md](http://127.0.0.1:10000/v1/md2img/to/img.jpg?url=https://github.com/Ink-33/html2image/raw/master/README.md)
+
 **Notice**: 
 This program will analyze _markdown_ (when `url` end with `.md`). If you don't want to render a _markdown_ file, please add the `nomd=true` parameter to the url.  
 
@@ -27,7 +28,7 @@ This program will analyze _markdown_ (when `url` end with `.md`). If you don't w
 
 1. render image and return json
 
-[http://127.0.0.1:10000/v1/html2img/to/img.json?url=http://www.google.com&format=jpg](http://127.0.0.1:10000/v1/html2img/to/img.json?url=http://www.google.com&format=jpg)
+[http://127.0.0.1:10000/v1/html2img/to/img.json?url=http://www.google.com&format=jpg](http://127.0.0.1:10000/v1/html2img/to/img.json?url=http://www.google.com&format=jpg)  
 
 2. show image url from the json result
 
