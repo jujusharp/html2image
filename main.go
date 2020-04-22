@@ -6,16 +6,34 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/unrolled/render" // or "gopkg.in/unrolled/render.v1"
+	"gopkg.in/russross/blackfriday.v2"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
-	"github.com/unrolled/render" // or "gopkg.in/unrolled/render.v1"
 )
 
 type ImageRender struct {
 	BinaryPath *string
+}
+
+func md2html(url string) string {
+	resp, err := http.Get(url)
+	if err != nil {
+		fmt.Println(err)
+		return "<p>Render Fail. Reason: Can not get content. </p>"
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println(err)
+		return "<p>Render Fail. Reason: Can not read body. </p>"
+	}
+	return string(blackfriday.Run(body))
 }
 
 func (r *ImageRender) BuildImageOptions(req *http.Request, format string) (ImageOptions, error) {
@@ -30,6 +48,15 @@ func (r *ImageRender) BuildImageOptions(req *http.Request, format string) (Image
 		} else {
 			url = "-"
 			log.Println("render for: ", html)
+		}
+	} else if strings.HasSuffix(url, ".md") {
+		if req.Form.Get("nomd") != "true" {
+			html = "<meta charset=\"utf-8\">" + md2html(url)
+			log.Println("render markdown for: ", url)
+			url = "-"
+		} else {
+			html = ""
+			log.Println("render for: ", url)
 		}
 	} else {
 		html = ""
@@ -144,18 +171,24 @@ func main() {
 	mux := http.NewServeMux()
 	staticHandler := http.FileServer(http.Dir(*imgRootDir))
 
-	mux.HandleFunc("/v1//html2img/to/img.png", func(w http.ResponseWriter, req *http.Request) {
+	mux.HandleFunc("/v1/html2img/to/img.png", func(w http.ResponseWriter, req *http.Request) {
 		imgRender.RenderBytes(w, req, "png")
 	})
-	mux.HandleFunc("/v1//html2img/to/img.jpg", func(w http.ResponseWriter, req *http.Request) {
+	mux.HandleFunc("/v1/html2img/to/img.jpg", func(w http.ResponseWriter, req *http.Request) {
 		imgRender.RenderBytes(w, req, "jpg")
 	})
-	mux.HandleFunc("/v1//html2img/show/img/", func(w http.ResponseWriter, req *http.Request) {
+	mux.HandleFunc("/v1/html2img/show/img/", func(w http.ResponseWriter, req *http.Request) {
 		req.URL.Path = req.URL.Path[9:]
 		staticHandler.ServeHTTP(w, req)
 	})
-	mux.HandleFunc("/v1//html2img/to/img.json", func(w http.ResponseWriter, req *http.Request) {
+	mux.HandleFunc("/v1/html2img/to/img.json", func(w http.ResponseWriter, req *http.Request) {
 		imgRender.RenderJSON(r, w, req, imgRootDir)
+	})
+	mux.HandleFunc("/v1/md2img/to/img.png", func(w http.ResponseWriter, req *http.Request) {
+		imgRender.RenderBytes(w, req, "png")
+	})
+	mux.HandleFunc("/v1/md2img/to/img.jpg", func(w http.ResponseWriter, req *http.Request) {
+		imgRender.RenderBytes(w, req, "jpg")
 	})
 	if len(*port) == 0 {
 		*port = "10000"
