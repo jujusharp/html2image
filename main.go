@@ -37,30 +37,49 @@ func md2html(url string) string {
 }
 
 func (r *ImageRender) BuildImageOptions(req *http.Request, format string) (ImageOptions, error) {
+	path := req.URL.Path
 	url := req.Form.Get("url")
-
+	reqIP := req.Header.Get("X-Forwarded-For")
 	var html string
-	if len(url) == 0 {
-		html = req.Form.Get("html")
 
-		if len(html) == 0 {
-			return ImageOptions{}, errors.New("url can't be null")
-		} else {
-			url = "-"
-			log.Println("render for: ", html)
-		}
-	} else if strings.HasSuffix(url, ".md") {
-		if req.Form.Get("nomd") != "true" {
-			html = "<meta charset=\"utf-8\">" + md2html(url)
-			log.Println("render markdown for: ", url)
-			url = "-"
+	if !strings.HasPrefix(path, "/v1/md2img/") {
+		if len(url) == 0 {
+			html = req.Form.Get("html")
+
+			if len(html) == 0 {
+				return ImageOptions{}, errors.New("url can't be null")
+			} else {
+				url = "-"
+				log.Println("render for:", html, " RemoteIP:", reqIP)
+			}
+		} else if strings.HasSuffix(url, ".md") {
+			if req.Form.Get("nomd") != "true" {
+				html = "<meta charset=\"utf-8\">" + md2html(url)
+				log.Println("render markdown for:", url, " RemoteIP:", reqIP)
+				url = "-"
+			} else {
+				html = ""
+				log.Println("render for:", url, " RemoteIP:", reqIP)
+			}
 		} else {
 			html = ""
-			log.Println("render for: ", url)
+			log.Println("render for:", url, " RemoteIP:", reqIP)
 		}
 	} else {
-		html = ""
-		log.Println("render for: ", url)
+		if strings.HasSuffix(url, ".md") {
+			if req.Form.Get("nomd") != "true" {
+				html = "<meta charset=\"utf-8\">" + md2html(url)
+				log.Println("render markdown for:", url, " RemoteIP:", reqIP)
+				url = "-"
+			} else {
+				log.Println("Prevent \"nomd\" in force markdown mode. url:", url, " RemoteIP:", reqIP)
+				return ImageOptions{}, errors.New("\"nomd\" cannot be true in force markdown mode")
+
+			}
+		} else {
+			log.Println("Prevent rendering ", url, "in force markdown mode.", " RemoteIP:", reqIP)
+			return ImageOptions{}, errors.New("url must be end with \".md\"in force markdown mode")
+		}
 	}
 
 	c := ImageOptions{BinaryPath: *r.BinaryPath,
@@ -170,7 +189,7 @@ func main() {
 	r := render.New()
 	mux := http.NewServeMux()
 	staticHandler := http.FileServer(http.Dir(*imgRootDir))
-
+	log.Println("Start.")
 	mux.HandleFunc("/v1/html2img/to/img.png", func(w http.ResponseWriter, req *http.Request) {
 		imgRender.RenderBytes(w, req, "png")
 	})
