@@ -37,7 +37,7 @@ func (r *ImageRender) BuildImageOptions(req *http.Request, format string) (Image
 	}
 
 	c := ImageOptions{BinaryPath: *r.BinaryPath,
-		Input: url, Html: html, Format: format}
+		Input: url, HTML: html, Format: format}
 
 	width, err := strconv.Atoi(req.Form.Get("width"))
 	if err == nil {
@@ -76,7 +76,7 @@ func (r *ImageRender) RenderBytes(w http.ResponseWriter, req *http.Request, form
 	w.Write(out)
 }
 
-func (r *ImageRender) RenderJson(httpRender *render.Render, w http.ResponseWriter,
+func (r *ImageRender) RenderJSON(httpRender *render.Render, w http.ResponseWriter,
 	req *http.Request, imgRootDir *string) {
 	err := req.ParseForm()
 	if err != nil {
@@ -103,7 +103,7 @@ func (r *ImageRender) RenderJson(httpRender *render.Render, w http.ResponseWrite
 
 	today := time.Now().Format("06/01/02/")
 	os.MkdirAll(*imgRootDir+today, 0755)
-	imgPath := today + contentToMd5(c.Input+c.Html) + "." + format
+	imgPath := today + contentToMd5(c.Input+c.HTML) + "." + format
 	c.Output = *imgRootDir + imgPath
 	log.Println("generate file path:", c.Output)
 	if !checkFileIsExist(c.Output) {
@@ -136,7 +136,7 @@ func contentToMd5(content string) string {
 func main() {
 	binPath := flag.String("path", "/usr/local/bin/wkhtmltoimage", "wkhtmltoimage bin path")
 	imgRootDir := flag.String("img.dir", "./tmp/", "generated image local dir")
-	port := flag.String("web.port", "8080", "web server port")
+	port := flag.String("web.port", "10000", "web server port")
 	flag.Parse()
 	imgRender := ImageRender{}
 	imgRender.BinaryPath = binPath
@@ -144,21 +144,21 @@ func main() {
 	mux := http.NewServeMux()
 	staticHandler := http.FileServer(http.Dir(*imgRootDir))
 
-	mux.HandleFunc("/to/img.png", func(w http.ResponseWriter, req *http.Request) {
+	mux.HandleFunc("/v1//html2img/to/img.png", func(w http.ResponseWriter, req *http.Request) {
 		imgRender.RenderBytes(w, req, "png")
 	})
-	mux.HandleFunc("/to/img.jpg", func(w http.ResponseWriter, req *http.Request) {
+	mux.HandleFunc("/v1//html2img/to/img.jpg", func(w http.ResponseWriter, req *http.Request) {
 		imgRender.RenderBytes(w, req, "jpg")
 	})
-	mux.HandleFunc("/show/img/", func(w http.ResponseWriter, req *http.Request) {
+	mux.HandleFunc("/v1//html2img/show/img/", func(w http.ResponseWriter, req *http.Request) {
 		req.URL.Path = req.URL.Path[9:]
 		staticHandler.ServeHTTP(w, req)
 	})
-	mux.HandleFunc("/api/v1/to/img.json", func(w http.ResponseWriter, req *http.Request) {
-		imgRender.RenderJson(r, w, req, imgRootDir)
+	mux.HandleFunc("/v1//html2img/to/img.json", func(w http.ResponseWriter, req *http.Request) {
+		imgRender.RenderJSON(r, w, req, imgRootDir)
 	})
 	if len(*port) == 0 {
-		*port = "8080"
+		*port = "10000"
 	}
 	http.ListenAndServe(":"+*port, mux)
 }

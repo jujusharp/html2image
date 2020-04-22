@@ -20,7 +20,7 @@ type ImageOptions struct {
 	BinaryPath string
 	// Input is the content to turn into an image. REQUIRED
 	//
-	// Can be a url (http://example.com), a local file (/tmp/example.html), or html as a string (send "-" and set the Html value)
+	// Can be a url (http://example.com), a local file (/tmp/example.html), or html as a string (send "-" and set the HTML value)
 	Input string
 	// Format is the type of image to generate
 	//
@@ -46,10 +46,10 @@ type ImageOptions struct {
 	CropW int
 	// Crop-h determines the final image crop height
 	CropH int
-	// Html is a string of html to render into and image.
+	// HTML is a string of html to render into and image.
 	//
 	// Only needed to be set if Input is set to "-"
-	Html string
+	HTML string
 	// Output controls how to save or return the image.
 	//
 	// Leave nil to return a []byte of the image. Set to a path (/tmp/example.png) to save as a file.
@@ -70,8 +70,8 @@ func GenerateImage(options *ImageOptions) ([]byte, error) {
 
 	cmd := exec.Command(options.BinaryPath, arr...)
 
-	if options.Html != "" {
-		cmd.Stdin = strings.NewReader(options.Html)
+	if options.HTML != "" {
+		cmd.Stdin = strings.NewReader(options.HTML)
 	}
 
 	output, err := cmd.CombinedOutput()
@@ -147,7 +147,7 @@ func buildParams(options *ImageOptions) ([]string, error) {
 	// url and output come last
 	if options.Input != "-" {
 		// make sure we dont pass stdin if we aren't expecting it
-		options.Html = ""
+		options.HTML = ""
 	}
 
 	a = append(a, options.Input)
