@@ -18,7 +18,8 @@ _cgo_gotypes.go
 _cgo_export.*
 
 _testmain.go
-
+_main.backup.go
 *.exe
 *.test
 *.prof
+html2image
